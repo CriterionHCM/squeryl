@@ -185,8 +185,8 @@ object Tempo extends Enumeration {
   val Presto = Value(3, "Presto")
 }
 
-class StringKeyedEntity(val id: String, val tempo: Tempo.Tempo) extends KeyedEntity[String] {
-  def this() = this("", Tempo.Largo)
+class StringKeyedEntity(val id: String, val tempo: Int) extends KeyedEntity[String] {
+  def this() = this("", Tempo.Largo.id)
 }
 
 class SchoolDb extends Schema {
@@ -269,7 +269,7 @@ class SchoolDb extends Schema {
 
   on(stringKeyedEntities)(e =>
     declare(
-      e.tempo.defaultsTo(Tempo.Largo)
+      e.tempo.defaultsTo(Tempo.Largo.id)
     )
   )
 
@@ -486,7 +486,7 @@ abstract class SchoolDbTestRun extends SchoolDbTestBase {
   }
 
   test("StringKeyedEntities") {
-    stringKeyedEntities.insert(new StringKeyedEntity("123", Tempo.Largo))
+    stringKeyedEntities.insert(new StringKeyedEntity("123", Tempo.Largo.id))
   }
 
   test("EqualCountInSubQuery") {

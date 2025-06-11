@@ -69,7 +69,7 @@ val commonSettings = Def.settings(
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((2, 13)) =>
         Seq(
-          "-Xsource:3-cross",
+//          "-Xsource:3-cross",
         )
       case Some((2, 12 | 11)) =>
         Seq(

@@ -20,6 +20,7 @@ import org.squeryl.internals._
 import org.squeryl.Session
 import org.squeryl.Schema
 import org.squeryl.Query
+
 import java.sql.ResultSet
 
 sealed trait TNumeric
@@ -66,9 +67,6 @@ sealed trait TOptionLowerBound
     with TOptionDate
     with TOptionString
     with TOptionTimestamp
-
-sealed trait TEnumValue[A]
-sealed trait TOptionEnumValue[A] extends TEnumValue[A]
 
 sealed trait TString extends TOptionString with TNonOption
 sealed trait TDate extends TOptionDate with TNonOption
@@ -202,17 +200,19 @@ trait TypedExpression[A1, T1] extends ExpressionNode {
   def is(columnAttributes: AttributeValidOnNumericalColumn*)(implicit restrictUsageWithinSchema: Schema) =
     new ColumnAttributeAssignment(_fieldMetaData, columnAttributes)
 
-  def in[A2, T2](t: Iterable[A2])(implicit cc: CanCompare[T1, T2]): LogicalBoolean =
+  def in[A2, T2](t: Iterable[A2])(implicit ev: TypedExpressionFactory[A2, T2], cc: CanCompare[T1, T2]): LogicalBoolean =
     new InclusionOperator(this, new RightHandSideOfIn(new ConstantExpressionNodeList(t, mapper)).toIn)
 
   def in[A2, T2](q: Query[A2])(implicit cc: CanCompare[T1, T2]): LogicalBoolean =
-    new InclusionOperator(this, new RightHandSideOfIn(q.copy(false, Nil).ast))
+    new InclusionOperator(this, new RightHandSideOfIn(q.copy(asRoot = false, Nil).ast))
 
-  def notIn[A2, T2](t: Iterable[A2])(implicit cc: CanCompare[T1, T2]): LogicalBoolean =
+  def notIn[A2, T2](
+    t: Iterable[A2]
+  )(implicit ev: TypedExpressionFactory[A2, T2], cc: CanCompare[T1, T2]): LogicalBoolean =
     new ExclusionOperator(this, new RightHandSideOfIn(new ConstantExpressionNodeList(t, mapper)).toNotIn)
 
   def notIn[A2, T2](q: Query[A2])(implicit cc: CanCompare[T1, T2]): LogicalBoolean =
-    new ExclusionOperator(this, new RightHandSideOfIn(q.copy(false, Nil).ast))
+    new ExclusionOperator(this, new RightHandSideOfIn(q.copy(asRoot = false, Nil).ast))
 
   def ~ = this
 
@@ -233,7 +233,7 @@ trait TypedExpression[A1, T1] extends ExpressionNode {
    * TODO: make safer with compiler plugin
    * Not type safe ! a TypedExpressionNode[T] might not be a SelectElementReference[_] that refers to a FieldSelectElement...   
    */
-  private[squeryl] def _fieldMetaData = {
+  private[squeryl] def _fieldMetaData: FieldMetaData = {
     val ser =
       try {
         this.asInstanceOf[SelectElementReference[_, _]]
