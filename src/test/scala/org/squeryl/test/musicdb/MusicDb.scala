@@ -59,10 +59,10 @@ class Song(
   val authorId: Int,
   val interpretId: Int,
   val cdId: Int,
-  var genre: Genre,
-  var secondaryGenre: Option[Genre]
+  var genre: Int,
+  var secondaryGenre: Option[Int]
 ) extends MusicDbObject {
-  def this() = this("", 0, 0, 0, Genre.Bluegrass, Some(Genre.Rock))
+  def this() = this("", 0, 0, 0, Genre.Bluegrass.id, Some(Genre.Rock.id))
 }
 
 class Cd(var title: String, var mainArtist: Int, var year: Int) extends MusicDbObject {
@@ -94,14 +94,14 @@ class TestData(schema: MusicDb) {
 
   val congaBlue = cds.insert(new Cd("Conga Blue", ponchoSanchez.id, 1998))
   val watermelonMan =
-    songs.insert(new Song("Watermelon Man", herbyHancock.id, ponchoSanchez.id, congaBlue.id, Jazz, Some(Latin)))
+    songs.insert(new Song("Watermelon Man", herbyHancock.id, ponchoSanchez.id, congaBlue.id, Jazz.id, Some(Latin.id)))
   val besameMama =
-    songs.insert(new Song("Besame Mama", mongoSantaMaria.id, ponchoSanchez.id, congaBlue.id, Latin, None))
+    songs.insert(new Song("Besame Mama", mongoSantaMaria.id, ponchoSanchez.id, congaBlue.id, Latin.id, None))
 
   val freedomSoundAlbum = cds.insert(new Cd("Freedom Sound", ponchoSanchez.id, 1997))
 
   val freedomSound =
-    songs.insert(new Song("Freedom Sound", ponchoSanchez.id, ponchoSanchez.id, freedomSoundAlbum.id, Jazz, Some(Latin)))
+    songs.insert(new Song("Freedom Sound", ponchoSanchez.id, ponchoSanchez.id, freedomSoundAlbum.id, Jazz.id, Some(Latin.id)))
 
   val expectedSongCountPerAlbum = List((congaBlue.title, 2), (freedomSoundAlbum.title, 1))
 }
@@ -778,7 +778,7 @@ abstract class MusicDbTestRun extends SchemaTester with QueryTester with RunTest
 //  }
 
   test("Enums IN") {
-    val gs = List(Jazz, Rock)
+    val gs = List(Jazz.id, Rock.id)
     val mainstream = from(songs)(s => where(s.genre in (gs)).select(s))
 
     mainstream.size shouldBe songs.where(s => s.genre === gs(0) or s.genre === gs(1)).size
@@ -787,17 +787,17 @@ abstract class MusicDbTestRun extends SchemaTester with QueryTester with RunTest
   test("Enums with groupBy", SingleTestRun) {
     val allKnownGenres = from(songs)(s => groupBy(s.genre)).map(_.key).toSet
 
-    assert(allKnownGenres == Set(Genre.Jazz, Genre.Latin))
+    assert(allKnownGenres == Set(Genre.Jazz.id, Genre.Latin.id))
 
     val allKnownSecondaryGenres = from(songs)(s => groupBy(s.secondaryGenre)).map(_.key).toSet
 
-    assert(allKnownSecondaryGenres == Set(None, Some(Genre.Latin)))
+    assert(allKnownSecondaryGenres == Set(None, Some(Genre.Latin.id)))
   }
 
   test("Enums Inhibit") {
-    def listSongs(genreFilter: Option[Genre]) =
+    def listSongs(genreFilter: Option[Int]) =
       from(songs)(s => where(Option(s.genre) === genreFilter.?).select(s))
-    listSongs(Some(Jazz)).size shouldBe songs.where(s => s.genre === Jazz).size
+    listSongs(Some(Jazz.id)).size shouldBe songs.where(s => s.genre === Jazz.id).size
     listSongs(None).size shouldBe songs.allRows.size
   }
 
@@ -817,43 +817,43 @@ abstract class MusicDbTestRun extends SchemaTester with QueryTester with RunTest
     // val md = songs.posoMetaData.findFieldMetaDataForProperty("genre").get
     // val z = md.canonicalEnumerationValueFor(2)
 
-    val q = songs.where(_.genre === Jazz).map(_.id).toSet
+    val q = songs.where(_.genre === Jazz.id).map(_.id).toSet
 
     q shouldBe Set(watermelonMan.id, freedomSound.id)
 
     var wmm = songs.where(_.id === watermelonMan.id).single
 
-    wmm.genre = Genre.Latin
+    wmm.genre = Genre.Latin.id
 
     // loggerOn
     songs.update(wmm)
 
     wmm = songs.where(_.id === watermelonMan.id).single
 
-    Genre.Latin shouldBe wmm.genre
+    Genre.Latin.id shouldBe wmm.genre
 
-    update(songs)(s => where(s.id === watermelonMan.id).set(s.genre := Genre.Jazz))
+    update(songs)(s => where(s.id === watermelonMan.id).set(s.genre := Genre.Jazz.id))
 
     wmm = songs.where(_.id === watermelonMan.id).single
 
-    Genre.Jazz shouldBe wmm.genre
+    Genre.Jazz.id shouldBe wmm.genre
 
     // test for  Option[Enumeration] :
 
-    val q2 = songs.where(_.secondaryGenre === Some(Genre.Latin)).map(_.id).toSet
+    val q2 = songs.where(_.secondaryGenre === Some(Genre.Latin.id)).map(_.id).toSet
 
     q2 shouldBe Set(watermelonMan.id, freedomSound.id)
 
     wmm = songs.where(_.id === watermelonMan.id).single
 
-    wmm.secondaryGenre = Some(Genre.Rock)
+    wmm.secondaryGenre = Some(Genre.Rock.id)
 
     // loggerOn
     songs.update(wmm)
 
     wmm = songs.where(_.id === watermelonMan.id).single
 
-    Some(Genre.Rock) shouldBe wmm.secondaryGenre
+    Some(Genre.Rock.id) shouldBe wmm.secondaryGenre
 
     update(songs)(s => where(s.id === watermelonMan.id).set(s.secondaryGenre := None))
 
@@ -861,11 +861,11 @@ abstract class MusicDbTestRun extends SchemaTester with QueryTester with RunTest
 
     None shouldBe wmm.secondaryGenre
 
-    update(songs)(s => where(s.id === watermelonMan.id).set(s.secondaryGenre := Some(Genre.Latin)))
+    update(songs)(s => where(s.id === watermelonMan.id).set(s.secondaryGenre := Some(Genre.Latin.id)))
 
     wmm = songs.where(_.id === watermelonMan.id).single
 
-    Some(Genre.Latin) shouldBe wmm.secondaryGenre
+    Some(Genre.Latin.id) shouldBe wmm.secondaryGenre
   }
 
   test("DynamicWhereClause1") {
@@ -901,7 +901,7 @@ abstract class MusicDbTestRun extends SchemaTester with QueryTester with RunTest
 // TODO: REFACTOR Z (reintroduce case statements tests)
   test("InTautology") {
 
-    val q = artists.where(_.firstName in Nil).toList
+    val q = artists.where(_.firstName in List.empty[String]).toList
 
     Nil shouldBe q
   }
@@ -910,7 +910,7 @@ abstract class MusicDbTestRun extends SchemaTester with QueryTester with RunTest
 
     val allArtists = artists.allRows.map(_.id).toSet
 
-    val q = artists.where(_.firstName notIn Nil).map(_.id).toSet
+    val q = artists.where(_.firstName notIn List.empty[String]).map(_.id).toSet
 
     allArtists shouldBe q
   }
@@ -1031,7 +1031,7 @@ abstract class MusicDbTestRun extends SchemaTester with QueryTester with RunTest
 //
 //  implicit def enum2EnumNode[A <: Enumeration#Value](e: A) = new EnumE[A](e)
 //
-//  import Genre._
+//  import Genre._.id
 //  import Tempo._
 //
 //  val genre = Jazz

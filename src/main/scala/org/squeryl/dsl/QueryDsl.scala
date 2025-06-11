@@ -197,8 +197,6 @@ trait QueryDsl
   implicit val booleanComparisonEvidence: CanCompare[TOptionBoolean, TOptionBoolean] =
     new CanCompare[TOptionBoolean, TOptionBoolean]
   implicit val uuidComparisonEvidence: CanCompare[TOptionUUID, TOptionUUID] = new CanCompare[TOptionUUID, TOptionUUID]
-  implicit def enumComparisonEvidence[A]: CanCompare[TEnumValue[A], TEnumValue[A]] =
-    new CanCompare[TEnumValue[A], TEnumValue[A]]
 
   implicit def concatenationConversion[A1, A2, T1, T2](co: ConcatOp[A1, A2, T1, T2]): TypedExpression[String, TString] =
     new ConcatOperationNode[String, TString](co.a1, co.a2, InternalFieldMapper.stringTEF.createOutMapper)

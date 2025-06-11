@@ -56,6 +56,10 @@ trait PrimitiveTypeMode extends QueryDsl with FieldMapper {
   implicit val longArrayTEF: org.squeryl.internals.ArrayTEF[Long, TLongArray] = PrimitiveTypeSupport.longArrayTEF
   implicit val stringArrayTEF: org.squeryl.internals.ArrayTEF[String, TStringArray] =
     PrimitiveTypeSupport.stringArrayTEF
+  implicit val uuidTEF: TypedExpressionFactory[UUID, TUUID] with PrimitiveJdbcMapper[UUID] =
+    PrimitiveTypeSupport.uuidTEF
+  implicit val optionUuidTEF: TypedExpressionFactory[Option[UUID], TOptionUUID]
+    with DeOptionizer[UUID, UUID, TUUID, Option[UUID], TOptionUUID] = PrimitiveTypeSupport.optionUUIDTEF
 
   // =========================== Numerical Integral ===========================
   implicit val byteTEF: IntegralTypedExpressionFactory[Byte, TByte, Float, TFloat] with PrimitiveJdbcMapper[Byte] =
@@ -110,14 +114,6 @@ trait PrimitiveTypeMode extends QueryDsl with FieldMapper {
     PrimitiveTypeSupport.binaryTEF.create(s)
   implicit def optionByteArrayToTE(s: Option[Array[Byte]]): TypedExpression[Option[Array[Byte]], TOptionByteArray] =
     PrimitiveTypeSupport.optionByteArrayTEF.create(s)
-
-  implicit def enumValueToTE[A >: Enumeration#Value <: Enumeration#Value](e: A): TypedExpression[A, TEnumValue[A]] =
-    PrimitiveTypeSupport.enumValueTEF[A](e).create(e)
-
-  implicit def optionEnumcValueToTE[A >: Enumeration#Value <: Enumeration#Value](
-    e: Option[A]
-  ): TypedExpression[Option[A], TOptionEnumValue[A]] =
-    PrimitiveTypeSupport.optionEnumValueTEF[A](e).create(e)
 
   implicit def byteToTE(f: Byte): TypedExpression[Byte, TByte] = byteTEF.create(f)
   implicit def optionByteToTE(f: Option[Byte]): TypedExpression[Option[Byte], TOptionByte] = optionByteTEF.create(f)

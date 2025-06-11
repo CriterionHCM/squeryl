@@ -155,44 +155,6 @@ trait FieldMapper {
         elements.map(i => i.asInstanceOf[java.lang.String])
     }
 
-    // FIXME: The type soup on this was beyond my patience for now...I think we'll need an ArrayDeOptionizer
-    // val optionIntArrayTEF = new TypedExpressionFactory[Option[Array[Int]],TOptionIntArray] with DeOptionizer[Array[Int], Array[Int], TIntArray, Option[Array[Int]], TOptionIntArray] {
-    // val deOptionizer = intArrayTEF
-    // }
-
-    def enumValueTEF[A >: Enumeration#Value <: Enumeration#Value](ev: Enumeration#Value) =
-      new JdbcMapper[Int, A] with TypedExpressionFactory[A, TEnumValue[A]] {
-
-        val enu = Utils.enumerationForValue(ev)
-
-        def extractNativeJdbcValue(rs: ResultSet, i: Int) = rs.getInt(i)
-        def defaultColumnLength: Int = intTEF.defaultColumnLength
-        def sample: A = ev
-        def convertToJdbc(v: A) = v.id
-        def convertFromJdbc(v: Int): A = {
-          enu.values
-            .find(_.id == v)
-            .getOrElse(
-              DummyEnum.DummyEnumerationValue
-            ) // JDBC has no concept of null value for primitive types (ex. Int)
-          // at this level, we mimic this JDBC flaw (the Option / None based on jdbc.wasNull will get sorted out by optionEnumValueTEF)
-        }
-      }
-
-    object DummyEnum extends Enumeration {
-      type DummyEnum = Value
-      val DummyEnumerationValue = Value(-1, "DummyEnumerationValue")
-    }
-
-    def optionEnumValueTEF[A >: Enumeration#Value <: Enumeration#Value](ev: Option[Enumeration#Value]) =
-      new TypedExpressionFactory[Option[A], TOptionEnumValue[A]]
-        with DeOptionizer[Int, A, TEnumValue[A], Option[A], TOptionEnumValue[A]] {
-        val deOptionizer: TypedExpressionFactory[A, TEnumValue[A]] with JdbcMapper[Int, A] = {
-          val e = ev.getOrElse(PrimitiveTypeSupport.DummyEnum.DummyEnumerationValue)
-          enumValueTEF[A](e)
-        }
-      }
-
     // =========================== Numerical Integral ===========================
 
     val byteTEF = new IntegralTypedExpressionFactory[Byte, TByte, Float, TFloat] with PrimitiveJdbcMapper[Byte] {
@@ -300,28 +262,6 @@ trait FieldMapper {
     register(longArrayTEF)
     register(doubleArrayTEF)
     register(stringArrayTEF)
-
-    val re = enumValueTEF(DummyEnum.DummyEnumerationValue)
-
-    /**
-     * Enumerations are treated differently, since the map method should normally
-     * return the actual Enumeration#value, but given that an enum is not only
-     * determined by the int value from the DB, but also the parent Enumeration
-     * parentEnumeration.values.find(_.id == v), the conversion is done 
-     * in FieldMetaData.canonicalEnumerationValueFor(i: Int) 
-     */
-    val z = new FieldAttributesBasedOnType[Any](
-      new MapperForReflection {
-        def map(rs: ResultSet, i: Int): Any = rs.getInt(i)
-        def convertToJdbc(v: AnyRef) = v
-      },
-      re.defaultColumnLength,
-      re.sample,
-      classOf[java.lang.Integer]
-    )
-
-    registry.put(z.clasz, z)
-    registry.put(z.clasz.getSuperclass, z)
   }
 
   protected trait MapperForReflection {
