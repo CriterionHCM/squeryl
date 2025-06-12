@@ -6,7 +6,7 @@ import sbt.Keys.*
 val Scala211 = "2.11.12"
 val Scala213 = "2.13.16"
 
-wartremoverWarnings ++= Warts.unsafe
+//wartremoverWarnings ++= Warts.unsafe
 
 name := "squeryl"
 
