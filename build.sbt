@@ -107,7 +107,10 @@ val commonSettings = Def.settings(
   publishTo := Some(
     "CritertionHCM Nexus" at "https://nexus.criterionhcm.com/repository/criterion-release/squeryl"
   ),
-  credentials += Credentials(new File(baseDirectory.value, ".release_credentials")),
+  credentials ++= Seq(
+    Credentials(baseDirectory.value / ".nexus_credentials"),
+    Credentials(new File(baseDirectory.value, ".release_credentials"))
+  ),
   Test / publishArtifact := false,
   scalaVersion := Scala213
 )
