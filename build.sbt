@@ -46,14 +46,15 @@ val commonSettings = Def.settings(
     setReleaseVersion,
     commitReleaseVersion,
     tagRelease,
-    releaseStepCommandAndRemaining("+ publishSigned"),
-    releaseStepCommandAndRemaining("sonaRelease"),
+    releaseStepCommandAndRemaining("+publish"),
+//    releaseStepCommandAndRemaining("+ publishSigned"),
+//    releaseStepCommandAndRemaining("sonaRelease"),
     setNextVersion,
     commitNextVersion,
     pushChanges
   ),
   parallelExecution := false,
-  publishMavenStyle := true,
+  publishMavenStyle := false,
   crossScalaVersions := Seq("2.12.20", Scala211, "2.10.7", Scala213, "3.3.6"),
   Compile / doc / scalacOptions ++= {
     val base = (LocalRootProject / baseDirectory).value.getAbsolutePath
@@ -104,7 +105,7 @@ val commonSettings = Def.settings(
   resolvers += nexus,
   externalResolvers := Resolver.combineDefaultResolvers(resolvers.value.toVector, mavenCentral = false),
   publishTo := Some(
-    "Nexus Realm" at "https://nexus.criterionhcm.com/nexus/content/groups/criterionhcm/squeryl"
+    "CritertionHCM Nexus" at "https://nexus.criterionhcm.com/nexus/content/groups/criterionhcm/squeryl"
   ),
   credentials += Credentials(new File(baseDirectory.value, ".nexus_credentials")),
   Test / publishArtifact := false,
