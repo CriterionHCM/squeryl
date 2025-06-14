@@ -348,7 +348,7 @@ trait DatabaseAdapter {
         s.setObject(i, convertToJdbcValue(constantTypedExpression.nativeJdbcValue))
       case FieldStatementParam(o, fieldMetaData) =>
         s.setObject(i, convertToJdbcValue(fieldMetaData.getNativeJdbcValue(o)))
-      case ConstantExpressionNodeListParam(v, constantExpressionNodeList) => s.setObject(i, convertToJdbcValue(v))
+      case ConstantExpressionNodeListParam(v) => s.setObject(i, v.nativeJdbcValue)
     }
 
   private def _exec[A](

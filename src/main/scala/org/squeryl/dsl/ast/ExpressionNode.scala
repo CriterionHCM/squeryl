@@ -396,7 +396,7 @@ class ConstantTypedExpression[A1, T1](
   override def toString = "'ConstantTypedExpression:" + value
 }
 
-class ConstantExpressionNodeList[T](val value: Iterable[T], mapper: OutMapper[_]) extends ExpressionNode {
+class ConstantExpressionNodeList(val value: Iterable[ConstantTypedExpression[_, _]]) extends ExpressionNode {
 
   def isEmpty =
     value == Nil
@@ -405,10 +405,8 @@ class ConstantExpressionNodeList[T](val value: Iterable[T], mapper: OutMapper[_]
     if (sw.isForDisplay)
       sw.write(ConstantExpressionNodeList.this.value.map(e => "'" + e + "'").mkString(","))
     else {
-      sw.write(ConstantExpressionNodeList.this.value.toSeq.map(z => "?").mkString(","))
-      ConstantExpressionNodeList.this.value.foreach(z =>
-        sw.addParam(ConstantExpressionNodeListParam(z.asInstanceOf[AnyRef], ConstantExpressionNodeList.this))
-      )
+      sw.write(ConstantExpressionNodeList.this.value.toSeq.map(_ => "?").mkString(","))
+      ConstantExpressionNodeList.this.value.foreach(z => sw.addParam(ConstantExpressionNodeListParam(z)))
     }
 }
 
@@ -635,7 +633,7 @@ class RightHandSideOfIn[A](val ast: ExpressionNode, val isIn: Option[Boolean] = 
         (!isIn.get))
 
   def isConstantEmptyList: Boolean = ast match {
-    case a: ConstantExpressionNodeList[_] =>
+    case a: ConstantExpressionNodeList =>
       a.isEmpty
     case a: ListExpressionNode =>
       a.children.isEmpty

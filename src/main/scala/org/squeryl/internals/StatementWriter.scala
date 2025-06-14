@@ -18,22 +18,12 @@ package org.squeryl.internals
 import org.squeryl.dsl.ast.ExpressionNode
 import collection.mutable.{HashSet, ArrayBuffer}
 import org.squeryl.dsl.ast.ConstantTypedExpression
-import org.squeryl.dsl.ast.ConstantExpressionNodeList
 
 trait StatementParam
 
 case class ConstantStatementParam(p: ConstantTypedExpression[_, _]) extends StatementParam
 case class FieldStatementParam(v: AnyRef, fmd: FieldMetaData) extends StatementParam
-/*
- * ParamWithMapper is a workadound to accommodate the ConstantExpressionNodeList, ideally 'in' and 'notIn' would grab the TEF in scope :
- *
- * def in[A2,T2](t: Traversable[A2])(implicit cc: CanCompare[T1,T2], tef: TypedExpressionFactory[A2,T2]): LogicalBoolean =
- *   new InclusionOperator(this, new RightHandSideOfIn(new zConstantExpressionNodeList(t, mapper)).toIn)
- *
- * type inferencer doesn't like it, so I grab the mapper that is available, which is JDBC compatible, so in practive it should work
- * all the time...
- * */
-case class ConstantExpressionNodeListParam(v: AnyRef, l: ConstantExpressionNodeList[_]) extends StatementParam
+case class ConstantExpressionNodeListParam[A, T](v: ConstantTypedExpression[A, T]) extends StatementParam
 
 /**
  * @param isForDisplay: when true, users of StatementWriter should write

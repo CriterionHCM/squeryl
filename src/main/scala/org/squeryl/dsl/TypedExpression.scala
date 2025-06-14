@@ -201,7 +201,10 @@ trait TypedExpression[A1, T1] extends ExpressionNode {
     new ColumnAttributeAssignment(_fieldMetaData, columnAttributes)
 
   def in[A2, T2](t: Iterable[A2])(implicit ev: TypedExpressionFactory[A2, T2], cc: CanCompare[T1, T2]): LogicalBoolean =
-    new InclusionOperator(this, new RightHandSideOfIn(new ConstantExpressionNodeList(t, mapper)).toIn)
+    new InclusionOperator(
+      this,
+      new RightHandSideOfIn(new ConstantExpressionNodeList(t.map(ev.createConstant))).toIn
+    )
 
   def in[A2, T2](q: Query[A2])(implicit cc: CanCompare[T1, T2]): LogicalBoolean =
     new InclusionOperator(this, new RightHandSideOfIn(q.copy(asRoot = false, Nil).ast))
@@ -209,7 +212,7 @@ trait TypedExpression[A1, T1] extends ExpressionNode {
   def notIn[A2, T2](
     t: Iterable[A2]
   )(implicit ev: TypedExpressionFactory[A2, T2], cc: CanCompare[T1, T2]): LogicalBoolean =
-    new ExclusionOperator(this, new RightHandSideOfIn(new ConstantExpressionNodeList(t, mapper)).toNotIn)
+    new ExclusionOperator(this, new RightHandSideOfIn(new ConstantExpressionNodeList(t.map(ev.createConstant))).toNotIn)
 
   def notIn[A2, T2](q: Query[A2])(implicit cc: CanCompare[T1, T2]): LogicalBoolean =
     new ExclusionOperator(this, new RightHandSideOfIn(q.copy(asRoot = false, Nil).ast))
