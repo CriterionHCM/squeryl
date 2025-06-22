@@ -133,7 +133,7 @@ trait QueryDsl
   def withCte(queries: Query[_]*): WithState =
     new fsm.WithState(queries.toList.map(_.copy(false, Nil)))
 
-  def &[A, T](i: => TypedExpression[A, T]): A =
+  def &[A, T <: PrimitiveType](i: => TypedExpression[A, T]): A =
     FieldReferenceLinker.pushExpressionOrCollectValue[A](() => i)
 
   implicit def typedExpression2OrderByArg[E](e: E)(implicit ev: E => TypedExpression[_, _]): OrderByArg =
@@ -141,47 +141,63 @@ trait QueryDsl
 
   implicit def orderByArg2OrderByExpression(a: OrderByArg): OrderByExpression = new OrderByExpression(a)
 
-  def sDevPopulation[T2 >: TOptionFloat, T1 <: T2, A1, A2](b: TypedExpression[A1, T1])(implicit
+  def sDevPopulation[T2 >: TOptionFloat <: PrimitiveType, T1 <: T2, A1, A2](b: TypedExpression[A1, T1])(implicit
     f: TypedExpressionFactory[A2, T2]
   ) = f.convert(new FunctionNode("stddev_pop", Seq(b)))
 
-  def sDevSample[T2 >: TOptionFloat, T1 <: T2, A1, A2](b: TypedExpression[A1, T1])(implicit
+  def sDevSample[T2 >: TOptionFloat <: PrimitiveType, T1 <: T2, A1, A2](b: TypedExpression[A1, T1])(implicit
     f: TypedExpressionFactory[A2, T2]
   ) = f.convert(new FunctionNode("stddev_samp", Seq(b)))
 
-  def varPopulation[T2 >: TOptionFloat, T1 <: T2, A1, A2](b: TypedExpression[A1, T1])(implicit
+  def varPopulation[T2 >: TOptionFloat <: PrimitiveType, T1 <: T2, A1, A2](b: TypedExpression[A1, T1])(implicit
     f: TypedExpressionFactory[A2, T2]
   ) = f.convert(new FunctionNode("var_pop", Seq(b)))
 
-  def varSample[T2 >: TOptionFloat, T1 <: T2, A1, A2](b: TypedExpression[A1, T1])(implicit
+  def varSample[T2 >: TOptionFloat <: PrimitiveType, T1 <: T2, A1, A2](b: TypedExpression[A1, T1])(implicit
     f: TypedExpressionFactory[A2, T2]
   ) = f.convert(new FunctionNode("var_samp", Seq(b)))
 
-  def max[T2 >: TOption, T1 <: T2, A1, A2](b: TypedExpression[A1, T1])(implicit f: TypedExpressionFactory[A2, T2]) =
+  def max[T2 >: TOption <: PrimitiveType, T1 <: T2, A1, A2](b: TypedExpression[A1, T1])(implicit
+    f: TypedExpressionFactory[A2, T2]
+  ) =
     f.convert(new FunctionNode("max", Seq(b)))
 
-  def min[T2 >: TOption, T1 <: T2, A1, A2](b: TypedExpression[A1, T1])(implicit f: TypedExpressionFactory[A2, T2]) =
+  def min[T2 >: TOption <: PrimitiveType, T1 <: T2, A1, A2](b: TypedExpression[A1, T1])(implicit
+    f: TypedExpressionFactory[A2, T2]
+  ) =
     f.convert(new FunctionNode("min", Seq(b)))
 
-  def avg[T2 >: TOptionFloat, T1 <: T2, A1, A2](b: TypedExpression[A1, T1])(implicit
+  def avg[T2 >: TOptionFloat <: PrimitiveType, T1 <: T2, A1, A2](b: TypedExpression[A1, T1])(implicit
     f: TypedExpressionFactory[A2, T2]
   ) = f.convert(new FunctionNode("avg", Seq(b)))
 
-  def sum[T2 >: TOption, T1 >: TNumericLowerTypeBound <: T2, A1, A2](b: TypedExpression[A1, T1])(implicit
-    f: TypedExpressionFactory[A2, T2]
+  def sum[T2 >: TOption <: PrimitiveType, T1 >: TNumericLowerTypeBound <: T2, A1, A2](b: TypedExpression[A1, T1])(
+    implicit f: TypedExpressionFactory[A2, T2]
   ) = f.convert(new FunctionNode("sum", Seq(b)))
 
-  def nvl[T4 <: TNonOption, T1 >: TOption, T3 >: T1, T2 <: T3, A1, A2, A3](
+  def nvl[
+    T4 <: TNonOption with PrimitiveType,
+    T1 >: TOption <: PrimitiveType,
+    T3 >: T1 <: PrimitiveType,
+    T2 <: T3,
+    A1,
+    A2,
+    A3
+  ](
     a: TypedExpression[A1, T1],
     b: TypedExpression[A2, T2]
   )(implicit d: DeOptionizer[_, A3, T4, _, T3]): TypedExpression[A3, T4] = new NvlNode(a, d.deOptionizer.convert(b))
 
   def not(b: LogicalBoolean) = new FunctionNode("not", Seq(b)) with LogicalBoolean
 
-  def upper[A1, T1](s: TypedExpression[A1, T1])(implicit f: TypedExpressionFactory[A1, T1], ev2: T1 <:< TOptionString) =
+  def upper[A1, T1 <: PrimitiveType](
+    s: TypedExpression[A1, T1]
+  )(implicit f: TypedExpressionFactory[A1, T1], ev2: T1 <:< TOptionString) =
     f.convert(new FunctionNode("upper", Seq(s)))
 
-  def lower[A1, T1](s: TypedExpression[A1, T1])(implicit f: TypedExpressionFactory[A1, T1], ev2: T1 <:< TOptionString) =
+  def lower[A1, T1 <: PrimitiveType](
+    s: TypedExpression[A1, T1]
+  )(implicit f: TypedExpressionFactory[A1, T1], ev2: T1 <:< TOptionString) =
     f.convert(new FunctionNode("lower", Seq(s)))
 
   def exists[A1](query: Query[A1]) = new ExistsExpression(query.copy(false, Nil).ast, "exists")
@@ -198,10 +214,12 @@ trait QueryDsl
     new CanCompare[TOptionBoolean, TOptionBoolean]
   implicit val uuidComparisonEvidence: CanCompare[TOptionUUID, TOptionUUID] = new CanCompare[TOptionUUID, TOptionUUID]
 
-  implicit def concatenationConversion[A1, A2, T1, T2](co: ConcatOp[A1, A2, T1, T2]): TypedExpression[String, TString] =
+  implicit def concatenationConversion[A1, A2, T1 <: PrimitiveType, T2 <: PrimitiveType](
+    co: ConcatOp[A1, A2, T1, T2]
+  ): TypedExpression[String, TString] =
     new ConcatOperationNode[String, TString](co.a1, co.a2, InternalFieldMapper.stringTEF.createOutMapper)
 
-  implicit def concatenationConversionWithOption1[A1, A2, T1, T2](
+  implicit def concatenationConversionWithOption1[A1, A2, T1 <: PrimitiveType, T2 <: PrimitiveType](
     co: ConcatOp[Option[A1], A2, T1, T2]
   ): TypedExpression[Option[String], TOptionString] =
     new ConcatOperationNode[Option[String], TOptionString](
@@ -210,7 +228,7 @@ trait QueryDsl
       InternalFieldMapper.optionStringTEF.createOutMapper
     )
 
-  implicit def concatenationConversionWithOption2[A1, A2, T1, T2](
+  implicit def concatenationConversionWithOption2[A1, A2, T1 <: PrimitiveType, T2 <: PrimitiveType](
     co: ConcatOp[A1, Option[A2], T1, T2]
   ): TypedExpression[Option[String], TOptionString] =
     new ConcatOperationNode[Option[String], TOptionString](
@@ -219,7 +237,7 @@ trait QueryDsl
       InternalFieldMapper.optionStringTEF.createOutMapper
     )
 
-  implicit def concatenationConversionWithOption3[A1, A2, T1, T2](
+  implicit def concatenationConversionWithOption3[A1, A2, T1 <: PrimitiveType, T2 <: PrimitiveType](
     co: ConcatOp[Option[A1], Option[A2], T1, T2]
   ): TypedExpression[Option[String], TOptionString] =
     new ConcatOperationNode[Option[String], TOptionString](
@@ -228,7 +246,7 @@ trait QueryDsl
       InternalFieldMapper.optionStringTEF.createOutMapper
     )
 
-  class ConcatOperationNode[A, T](e1: ExpressionNode, e2: ExpressionNode, val mapper: OutMapper[A])
+  class ConcatOperationNode[A, T <: PrimitiveType](e1: ExpressionNode, e2: ExpressionNode, val mapper: OutMapper[A])
       extends BinaryOperatorNode(e1, e2, "||", false)
       with TypedExpression[A, T] {
     override def doWrite(sw: StatementWriter) =
@@ -472,7 +490,7 @@ trait QueryDsl
     }
 
     private def _viewReferedInExpression(v: View[_], ee: EqualityExpression) =
-      ee.filterDescendantsOfType[SelectElementReference[Any, Any]]
+      ee.filterDescendantsOfType[SelectElementReference[Any, PrimitiveType]]
         .exists(
           _.selectElement.origin.asInstanceOf[ViewExpressionNode[_]].view == v
         )

@@ -16,10 +16,11 @@
 package org.squeryl.internals
 
 import net.sf.cglib.proxy._
+
 import collection.mutable.ArrayBuffer
 import org.squeryl.dsl.ast._
-import org.squeryl.dsl.CompositeKey
-import org.squeryl.dsl.TypedExpression
+import org.squeryl.dsl.{CompositeKey, PrimitiveType, TypedExpression}
+
 import java.lang.reflect.{Field, Method}
 import org.squeryl._
 
@@ -367,7 +368,9 @@ object FieldReferenceLinker {
 
       if (isComposite) {
         val ck = res.asInstanceOf[CompositeKey]
-        ck._members = Some(_compositeKeyMembers.get.get.map(new SelectElementReference[Any, Any](_, NoOpOutMapper)))
+        ck._members = Some(
+          _compositeKeyMembers.get.get.map(new SelectElementReference[Any, PrimitiveType](_, NoOpOutMapper))
+        )
         ck._propertyName = Some(m.getName)
         _compositeKeyMembers.remove()
       }

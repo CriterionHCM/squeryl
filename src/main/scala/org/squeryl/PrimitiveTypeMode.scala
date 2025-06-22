@@ -102,6 +102,12 @@ trait PrimitiveTypeMode extends QueryDsl with FieldMapper {
   implicit def optionTimestampToTE(s: Option[Timestamp]): TypedExpression[Option[Timestamp], TOptionTimestamp] =
     optionTimestampTEF.create(s)
 
+  implicit val booleanTEF: TypedExpressionFactory[Boolean, TBoolean] with PrimitiveJdbcMapper[Boolean] =
+    PrimitiveTypeSupport.booleanTEF
+  implicit val optionBooleanTEF: TypedExpressionFactory[Option[Boolean], TOptionBoolean]
+    with DeOptionizer[Boolean, Boolean, TBoolean, Option[Boolean], TOptionBoolean] =
+    PrimitiveTypeSupport.optionBooleanTEF
+
   implicit def booleanToTE(s: Boolean): TypedExpression[Boolean, TBoolean] = PrimitiveTypeSupport.booleanTEF.create(s)
   implicit def optionBooleanToTE(s: Option[Boolean]): TypedExpression[Option[Boolean], TOptionBoolean] =
     PrimitiveTypeSupport.optionBooleanTEF.create(s)
@@ -365,4 +371,19 @@ trait PrimitiveTypeMode extends QueryDsl with FieldMapper {
       optionBigDecimalTEF.createOutMapper
     )
 
+  implicit def compSub[A <: PrimitiveType, B <: PrimitiveType](implicit
+    ev: B <:< A,
+    negEv: A =!= B
+  ): TypeComparer[A, B] = new TypeComparer[A, B]
+  implicit def compSup[A <: PrimitiveType, B >: A <: PrimitiveType]: TypeComparer[A, B] = new TypeComparer[A, B]
+  implicit def compEq[A, B](implicit ev: A =:= B): TypeComparer[A, B] = new TypeComparer[A, B]
+  implicit def compOptionEq[A, B](implicit ev: Option[A] =:= B): TypeComparer[A, B] = new TypeComparer[A, B]
+  implicit def compEqOption[A, B](implicit ev: A =:= Option[B]): TypeComparer[A, B] = new TypeComparer[A, B]
+
+  implicit def toTE[P, A, T <: PrimitiveType](v: A)(implicit
+    m: NonPrimitiveJdbcMapper[P, A, T]
+  ): TypedExpression[A, T] = m.create(v)
+  implicit def toOptionTE[P, A, T <: PrimitiveType](v: Option[A])(implicit
+    tef: TypedExpressionFactory[Option[A], T]
+  ): TypedExpression[Option[A], T] = tef.create(v)
 }

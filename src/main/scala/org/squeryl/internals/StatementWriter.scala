@@ -15,15 +15,18 @@
  ***************************************************************************** */
 package org.squeryl.internals
 
+import org.squeryl.dsl.PrimitiveType
 import org.squeryl.dsl.ast.ExpressionNode
-import collection.mutable.{HashSet, ArrayBuffer}
+
+import collection.mutable.{ArrayBuffer, HashSet}
 import org.squeryl.dsl.ast.ConstantTypedExpression
 
 trait StatementParam
 
 case class ConstantStatementParam(p: ConstantTypedExpression[_, _]) extends StatementParam
 case class FieldStatementParam(v: AnyRef, fmd: FieldMetaData) extends StatementParam
-case class ConstantExpressionNodeListParam[A, T](v: ConstantTypedExpression[A, T]) extends StatementParam
+case class ConstantExpressionNodeListParam[A, T <: PrimitiveType](v: ConstantTypedExpression[A, T])
+    extends StatementParam
 
 /**
  * @param isForDisplay: when true, users of StatementWriter should write

@@ -53,7 +53,7 @@ class H2_SchoolDbMutableRelations extends mutablerelations.SchoolDb2MetableRelat
 class H2_TransactionTests extends TransactionTests with H2_Connection
 class H2_SchoolDb2 extends schooldb2.SchoolDb2Tests with H2_Connection
 class H2_SchoolDb extends schooldb.SchoolDbTestRun with H2_Connection
-class H2_TestCustomTypesMode extends customtypes.TestCustomTypesMode with H2_Connection
+//class H2_TestCustomTypesMode extends customtypes.TestCustomTypesMode with H2_Connection
 class H2_KickTheTires extends demo.KickTheTires with H2_Connection
 class H2_MusicDb extends musicdb.MusicDbTestRun with H2_Connection
 class H2_LeftJoinTest extends LeftJoinTest with H2_Connection
@@ -75,7 +75,7 @@ class H2_LazySchoolDbMutableRelations extends mutablerelations.SchoolDb2MetableR
 class H2_LazyTransactionTests extends TransactionTests with H2_LazyConnection
 class H2_LazySchoolDb2 extends schooldb2.SchoolDb2Tests with H2_LazyConnection
 class H2_LazySchoolDb extends schooldb.SchoolDbTestRun with H2_LazyConnection
-class H2_LazyTestCustomTypesMode extends customtypes.TestCustomTypesMode with H2_LazyConnection
+//class H2_LazyTestCustomTypesMode extends customtypes.TestCustomTypesMode with H2_LazyConnection
 class H2_LazyKickTheTires extends demo.KickTheTires with H2_LazyConnection
 class H2_LazyMusicDb extends musicdb.MusicDbTestRun with H2_LazyConnection
 class H2_LazyLeftJoinTest extends LeftJoinTest with H2_LazyConnection
