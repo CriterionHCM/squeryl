@@ -56,16 +56,16 @@ val commonSettings = Def.settings(
   parallelExecution := false,
   publishMavenStyle := false,
   crossScalaVersions := Seq(Scala213), // , "3.3.6"),
-  Compile / doc / scalacOptions ++= {
-    val base = (LocalRootProject / baseDirectory).value.getAbsolutePath
-    val hash = sys.process.Process("git rev-parse HEAD").lineStream_!.head
-    Seq(
-      "-sourcepath",
-      base,
-      "-doc-source-url",
-      "https://github.com/squeryl/squeryl/tree/" + hash + "€{FILE_PATH}.scala"
-    )
-  },
+//  Compile / doc / scalacOptions ++= {
+//    val base = (LocalRootProject / baseDirectory).value.getAbsolutePath
+//    val hash = sys.process.Process("git rev-parse HEAD").lineStream_!.head
+//    Seq(
+//      "-sourcepath",
+//      base,
+//      "-doc-source-url",
+//      "https://github.com/squeryl/squeryl/tree/" + hash + "€{FILE_PATH}.scala"
+//    )
+//  },
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((2, 13)) =>
