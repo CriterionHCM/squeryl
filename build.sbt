@@ -55,7 +55,7 @@ val commonSettings = Def.settings(
   ),
   parallelExecution := false,
 //  sbtPluginPublishLegacyMavenStyle := false,
-//  publishMavenStyle := false,
+  publishMavenStyle := true,
   crossScalaVersions := Seq(Scala213), // , "3.3.6"),
 //  Compile / doc / scalacOptions ++= {
 //    val base = (LocalRootProject / baseDirectory).value.getAbsolutePath
@@ -170,6 +170,26 @@ libraryDependencies ++= {
 val disableMacrosProject: Def.Initialize[Boolean] = Def.setting(
   scalaBinaryVersion.value != "3"
 )
+
+pomPostProcess := { node =>
+  import scala.xml._
+  import scala.xml.transform._
+  val rule = new RewriteRule {
+    override def transform(node: Node) = {
+      if (
+        (node.label == "dependency") &&
+        ((node \ "groupId").text == "org.squeryl") &&
+        (node \ "artifactId").text.startsWith((macros / moduleName).value) &&
+        disableMacrosProject.value
+      ) {
+        NodeSeq.Empty
+      } else {
+        node
+      }
+    }
+  }
+  new RuleTransformer(rule).transform(node)(0)
+}
 
 lazy val macros = project
   .in(file("macros"))
