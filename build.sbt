@@ -105,11 +105,11 @@ val commonSettings = Def.settings(
   resolvers += nexus,
   externalResolvers := Resolver.combineDefaultResolvers(resolvers.value.toVector, mavenCentral = false),
   publishTo := Some(
-    "CritertionHCM Nexus" at "https://nexus.criterionhcm.com/repository/criterion-release/squeryl"
+    "CritertionHCM Nexus" at "https://nexus.criterionhcm.com/repository/criterion-release"
   ),
   credentials ++= Seq(
     Credentials(baseDirectory.value / ".nexus_credentials"),
-    Credentials(new File(baseDirectory.value, ".release_credentials"))
+    Credentials(baseDirectory.value / ".release_credentials")
   ),
   Test / publishArtifact := false,
   scalaVersion := Scala213
