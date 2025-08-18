@@ -54,8 +54,8 @@ val commonSettings = Def.settings(
     pushChanges
   ),
   parallelExecution := false,
-  sbtPluginPublishLegacyMavenStyle := false,
-  publishMavenStyle := false,
+//  sbtPluginPublishLegacyMavenStyle := false,
+//  publishMavenStyle := false,
   crossScalaVersions := Seq(Scala213), // , "3.3.6"),
 //  Compile / doc / scalacOptions ++= {
 //    val base = (LocalRootProject / baseDirectory).value.getAbsolutePath
