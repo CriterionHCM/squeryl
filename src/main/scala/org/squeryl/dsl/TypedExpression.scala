@@ -331,6 +331,16 @@ abstract class NonPrimitiveJdbcMapper[P, A, T](
   fieldMapper.register(this)
 }
 
+object NonPrimitiveJdbcMapper {
+  def create[P, A, T](from: P => A, to: A => P)(implicit
+    tef: PrimitiveJdbcMapper[P] with TypedExpressionFactory[P, T],
+    fieldMapper: FieldMapper
+  ): NonPrimitiveJdbcMapper[P, A, T] = new NonPrimitiveJdbcMapper[P, A, T](tef, fieldMapper) {
+    override def convertFromJdbc(v: P): A = from(v)
+    override def convertToJdbc(v: A): P = to(v)
+  }
+}
+
 trait TypedExpressionFactory[A, T] {
   self: JdbcMapper[_, A] =>
 
@@ -372,6 +382,20 @@ trait TypedExpressionFactory[A, T] {
 
     def sample: A = zis.sample
   }
+}
+
+object TypedExpressionFactory {
+
+  def createOptionMapper[A, A1, T, TOpt](implicit
+    tef: JdbcMapper[A1, A] with TypedExpressionFactory[A, T]
+  ): JdbcMapper[A1, Option[A]]
+    with TypedExpressionFactory[Option[A], TOpt]
+    with DeOptionizer[A1, A, T, Option[A], TOpt] =
+    new JdbcMapper[A1, Option[A]]
+      with TypedExpressionFactory[Option[A], TOpt]
+      with DeOptionizer[A1, A, T, Option[A], TOpt] {
+      override def deOptionizer: TypedExpressionFactory[A, T] with JdbcMapper[A1, A] = tef
+    }
 }
 
 trait IntegralTypedExpressionFactory[A1, T1, A2, T2]

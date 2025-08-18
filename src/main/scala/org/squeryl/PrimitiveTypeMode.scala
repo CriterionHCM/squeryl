@@ -365,4 +365,8 @@ trait PrimitiveTypeMode extends QueryDsl with FieldMapper {
       optionBigDecimalTEF.createOutMapper
     )
 
+  implicit def toTE[A, T](v: A)(implicit tef: TypedExpressionFactory[A, T]): TypedExpression[A, T] = tef.create(v)
+  implicit def toOptionTE[A, T](v: Option[A])(implicit
+    tef: TypedExpressionFactory[Option[A], T]
+  ): TypedExpression[Option[A], T] = tef.create(v)
 }
