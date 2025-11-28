@@ -399,7 +399,7 @@ class ConstantTypedExpression[A1, T1](
 class ConstantExpressionNodeList(val value: Iterable[ConstantTypedExpression[_, _]]) extends ExpressionNode {
 
   def isEmpty =
-    value == Nil
+    value.isEmpty
 
   def doWrite(sw: StatementWriter) =
     if (sw.isForDisplay)

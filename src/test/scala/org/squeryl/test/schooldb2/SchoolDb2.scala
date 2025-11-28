@@ -428,13 +428,67 @@ abstract class SchoolDb2Tests extends SchemaTester with RunTestsInsideTransactio
 //  }
 
   test("InFromSet") {
-    val set = Set("foo", "bar", "baz")
-    from(entries)(e => where(e.text.in(set)) select (e)).toList
+    val seedData = seedDataDef()
+    import seedData._
+    val set = Set(chemistry.name, philosophy.name)
+    val result = from(subjects)(s => where(s.name.in(set)) select (s)).map(_.name).toSet
+    result shouldBe set
+  }
+
+  test("InFromSetEmpty") {
+    seedDataDef()
+    val set = Set.empty[String]
+    val result = from(subjects)(s => where(s.name.in(set)) select (s)).toList
+    result shouldBe empty
+  }
+
+  test("InFromSeqEmpty") {
+    seedDataDef()
+    val seq = Seq.empty[String]
+    val result = from(subjects)(s => where(s.name.in(seq)) select (s)).toList
+    result shouldBe empty
+  }
+
+  test("InFromVectorEmpty") {
+    seedDataDef()
+    val vector = Vector.empty[String]
+    val result = from(subjects)(s => where(s.name.in(vector)) select (s)).toList
+    result shouldBe empty
+  }
+
+  test("NotInFromSetEmpty") {
+    seedDataDef()
+    val set = Set.empty[String]
+    val allSubjects = subjects.allRows.map(_.id).toSet
+    val result = from(subjects)(s => where(s.name.notIn(set)) select (s)).map(_.id).toSet
+    allSubjects shouldBe result
+    result should not be empty
+  }
+
+  test("NotInFromSeqEmpty") {
+    seedDataDef()
+    val seq = Seq.empty[String]
+    val allSubjects = subjects.allRows.map(_.id).toSet
+    val result = from(subjects)(s => where(s.name.notIn(seq)) select (s)).map(_.id).toSet
+    allSubjects shouldBe result
+    result should not be empty
+  }
+
+  test("NotInFromVectorEmpty") {
+    seedDataDef()
+    val vector = Vector.empty[String]
+    val allSubjects = subjects.allRows.map(_.id).toSet
+    val result = from(subjects)(s => where(s.name.notIn(vector)) select (s)).map(_.id).toSet
+    allSubjects shouldBe result
+    result should not be empty
   }
 
   test("InFromSeq") {
-    val set = Set("foo", "bar", "baz").toSeq
-    from(entries)(e => where(e.text.in(set)) select (e)).toList
+    val seedData = seedDataDef()
+    import seedData._
+    val seq = Seq(chemistry.name, philosophy.name)
+    val result = from(subjects)(s => where(s.name.in(seq)) select (s)).map(_.name).toSet
+    result shouldBe seq.toSet
   }
 
   test("Inequality with query on right hand side", SingleTestRun) {
