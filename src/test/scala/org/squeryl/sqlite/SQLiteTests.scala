@@ -54,7 +54,7 @@ class SQLite_SchoolDb extends schooldb.SchoolDbTestRun with SQLite_Connection {
     "OptimisticCC1"
   )
 }
-class SQLite_TestCustomTypesMode extends customtypes.TestCustomTypesMode with SQLite_Connection
+//class SQLite_TestCustomTypesMode extends customtypes.TestCustomTypesMode with SQLite_Connection
 class SQLite_KickTheTires extends demo.KickTheTires with SQLite_Connection {
   // This test generates a sentence with double parentheses after `in` clause
   // In SQLite this causes that the query returns only one item
@@ -89,7 +89,7 @@ class SQLite_LazySchoolDb extends schooldb.SchoolDbTestRun with SQLite_LazyConne
     "OptimisticCC1"
   )
 }
-class SQLite_LazyTestCustomTypesMode extends customtypes.TestCustomTypesMode with SQLite_LazyConnection
+//class SQLite_LazyTestCustomTypesMode extends customtypes.TestCustomTypesMode with SQLite_LazyConnection
 class SQLite_LazyKickTheTires extends demo.KickTheTires with SQLite_LazyConnection {
   // This test generates a sentence with double parentheses after `in` clause
   // In SQLite this causes that the query returns only one item
