@@ -18,11 +18,12 @@ package org.squeryl.test.schooldb
 import java.sql.SQLException
 import org.squeryl.annotations.Column
 import org.squeryl.framework._
+
 import java.util.Date
 import java.text.SimpleDateFormat
 import org.squeryl.dsl._
 import org.squeryl._
-import adapters.{MSSQLServer, OracleAdapter, DerbyAdapter}
+import adapters.{DerbyAdapter, MSSQLServer, OracleAdapter}
 import internals.{FieldMetaData, FieldReferenceLinker, LifecycleEvent}
 import collection.mutable.ArrayBuffer
 import org.squeryl.dsl.ast.ExpressionNode
@@ -530,8 +531,8 @@ abstract class SchoolDbTestRun extends SchoolDbTestBase {
     from(students)(s =>
       compute[Option[Float], Option[Float], Option[Double], Long](
         avg(s.age),
-        avg(s.age)(optionFloatTEF) + 3,
-        avg(s.age)(optionFloatTEF)./(count)(optionDoubleTEF, optionDoubleTEF),
+        avg(s.age) + 3,
+        avg(s.age)./(count),
         count + 6
       )
     )
@@ -591,7 +592,7 @@ abstract class SchoolDbTestRun extends SchoolDbTestBase {
     val testInstance = sharedTestInstance; import testInstance._
 
     val q =
-      from(addresses)(a => where(a.appNumberSuffix === Some("A")).select(a))
+      from(addresses)(a => where(a.appNumberSuffix === Option("A")).select(a))
 
     val h = q.head
 
@@ -852,7 +853,7 @@ abstract class SchoolDbTestRun extends SchoolDbTestBase {
       from(students)(s =>
         where({
           // TODO: REFACTOR Z
-          s.isMultilingual === (None: Option[Boolean])
+          s.isMultilingual === Option.empty[Boolean]
         }).select(s.id)
       )
 
@@ -1046,7 +1047,7 @@ abstract class SchoolDbTestRun extends SchoolDbTestBase {
         where(
           nvl(c.meaninglessLongOption, 3)(optionLongTEF) <> 1234 and nvl(c.meaninglessLongOption, 3)(
             optionLongTEF
-          ) === 3
+          ) === 3L
         ).select(&(nvl(c.meaninglessLongOption, 5)(optionLongTEF)))
       ).toList: List[Long]
 
@@ -1400,13 +1401,13 @@ abstract class SchoolDbTestRun extends SchoolDbTestBase {
 
     update(professors)(p => where(p.id === babaZula.id).set(p.weightInBD := Some(261.123456111: BigDecimal)))
 
-    val babaZula2 = professors.where(_.weightInBD === Some(261.123456111: BigDecimal))
+    val babaZula2 = professors.where(_.weightInBD === Option(261.123456111: BigDecimal))
 
     BigDecimal(261.123456111) shouldBe babaZula2.single.weightInBD.get
 
     update(professors)(p => where(p.id === babaZula.id).set(p.weightInBD := Some(261.1234561112: BigDecimal)))
 
-    val babaZula3 = professors.where(_.weightInBD === Some(261.1234561112: BigDecimal))
+    val babaZula3 = professors.where(_.weightInBD === Option(261.1234561112: BigDecimal))
 
     babaZula3.Count.toLong shouldBe 1
 
@@ -1415,7 +1416,7 @@ abstract class SchoolDbTestRun extends SchoolDbTestBase {
         .set(p.weightInBD := p.weightInBD plus 10 minus 5 times 4 div 2) // FIXME: mulitiplications aren't done first
     )
 
-    val babaZula4 = professors.where(_.weightInBD === Some(532.2469122224: BigDecimal))
+    val babaZula4 = professors.where(_.weightInBD === Option(532.2469122224: BigDecimal))
 
     BigDecimal(532.2469122224) shouldBe babaZula4.single.weightInBD.get
     babaZula4.Count.toLong shouldBe 1
@@ -1430,7 +1431,7 @@ abstract class SchoolDbTestRun extends SchoolDbTestBase {
       ) // FIXME: multiplications aren't done first
     )
 
-    val babaZula5 = professors.where(_.yearlySalaryBD === 170)
+    val babaZula5 = professors.where(_.yearlySalaryBD === BigDecimal(170))
 
     BigDecimal(170) shouldBe babaZula5.single.yearlySalaryBD
     babaZula5.Count.toLong shouldBe 1
@@ -1562,7 +1563,7 @@ abstract class SchoolDbTestRun extends SchoolDbTestBase {
 
     val expectedAvgSal = expectedAvgSal_.sum / expectedAvgSal_.size
 
-    val expectedAvgWeight_ = professors.allRows.map(_.weightInBD).flatten
+    val expectedAvgWeight_ = professors.allRows.flatMap(_.weightInBD)
 
     val expectedAvgWeight = expectedAvgWeight_.sum / expectedAvgWeight_.size
 

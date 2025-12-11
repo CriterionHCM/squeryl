@@ -17,13 +17,12 @@ package org.squeryl.dsl
 
 import org.squeryl.dsl.ast._
 import org.squeryl.internals._
-import org.squeryl.Session
-import org.squeryl.Schema
-import org.squeryl.Query
+import org.squeryl.{Query, Schema, Session}
 
 import java.sql.ResultSet
 
-sealed trait TNumeric
+sealed trait PrimitiveType
+sealed trait TNumeric extends PrimitiveType
 sealed trait TOptionBigDecimal extends TNumeric
 sealed trait TBigDecimal extends TOptionBigDecimal with TNonOption
 
@@ -76,25 +75,36 @@ sealed trait TIntArray extends TOptionIntArray with TNonOption
 sealed trait TLongArray extends TOptionLongArray with TNonOption
 sealed trait TDoubleArray extends TOptionDoubleArray with TNonOption
 sealed trait TStringArray extends TOptionStringArray with TNonOption
-sealed trait TOptionString
-sealed trait TOptionDate
-sealed trait TOptionTimestamp
-sealed trait TOptionByteArray
-sealed trait TOptionIntArray
-sealed trait TOptionLongArray
-sealed trait TOptionDoubleArray
-sealed trait TOptionStringArray
+sealed trait TOptionString extends PrimitiveType
+sealed trait TOptionDate extends PrimitiveType
+sealed trait TOptionTimestamp extends PrimitiveType
+sealed trait TOptionByteArray extends PrimitiveType
+sealed trait TOptionIntArray extends PrimitiveType
+sealed trait TOptionLongArray extends PrimitiveType
+sealed trait TOptionDoubleArray extends PrimitiveType
+sealed trait TOptionStringArray extends PrimitiveType
 sealed trait TBoolean extends TOptionBoolean with TNonOption
-sealed trait TOptionBoolean
+sealed trait TOptionBoolean extends PrimitiveType
 sealed trait TUUID extends TOptionUUID with TNonOption
-sealed trait TOptionUUID
+sealed trait TOptionUUID extends PrimitiveType
 
 @scala.annotation.implicitNotFound(
   "The left side of the comparison (===, <>, between, ...) is not compatible with the right side."
 )
 sealed class CanCompare[-A1, -A2]
 
-trait TypedExpression[A1, T1] extends ExpressionNode {
+sealed class TypeComparer[A, B]
+
+sealed trait =!=[-A, +B]
+
+object =!= {
+  implicit def notEq[A, B]: =!=[A, B] = new =!=[A, B] {}
+
+  implicit def ambig1[A, B](implicit ev: A =:= B): =!=[A, B] = sys.error("unreachable")
+  implicit def ambig2[A, B](implicit ev: A =:= B): =!=[A, B] = sys.error("unreachable")
+}
+
+trait TypedExpression[A1, T1 <: PrimitiveType] extends ExpressionNode {
   outer =>
 
   def plus[T3 >: T1 <: TNumeric, T2 <: T3, A2, A3](e: TypedExpression[A2, T2])(implicit
@@ -109,7 +119,7 @@ trait TypedExpression[A1, T1] extends ExpressionNode {
     f: TypedExpressionFactory[A3, T3]
   ): TypedExpression[A3, T3] = f.convert(new BinaryOperatorNode(this, e, "-"))
 
-  def div[T3 >: T1 <: TNumeric, T2 <: T3, A2, A3, A4, T4](
+  def div[T3 >: T1 <: TNumeric, T2 <: T3, A2, A3, A4, T4 <: PrimitiveType](
     e: TypedExpression[A2, T2]
   )(implicit f: TypedExpressionFactory[A3, T3], tf: Floatifier[T3, A4, T4]): TypedExpression[A4, T4] =
     tf.floatify(new BinaryOperatorNode(this, e, "/"))
@@ -126,70 +136,92 @@ trait TypedExpression[A1, T1] extends ExpressionNode {
     f: TypedExpressionFactory[A3, T3]
   ): TypedExpression[A3, T3] = minus(e)
 
-  def /[T3 >: T1 <: TNumeric, T2 <: T3, A2, A3, A4, T4](
+  def /[T3 >: T1 <: TNumeric, T2 <: T3, A2, A3, A4, T4 <: PrimitiveType](
     e: TypedExpression[A2, T2]
   )(implicit f: TypedExpressionFactory[A3, T3], tf: Floatifier[T3, A4, T4]): TypedExpression[A4, T4] =
     tf.floatify(new BinaryOperatorNode(this, e, "/"))
 
-  def ===[A2, T2](b: TypedExpression[A2, T2])(implicit ev: CanCompare[T1, T2]) = new EqualityExpression(this, b)
-  def <>[A2, T2](b: TypedExpression[A2, T2])(implicit ev: CanCompare[T1, T2]) =
+  def ===[A2, T2 <: PrimitiveType](
+    b: TypedExpression[A2, T2]
+  )(implicit evT: TypeComparer[T1, T2], ev: TypeComparer[A1, A2]) =
+    new EqualityExpression(this, b)
+
+  def ===[A2, T2 <: PrimitiveType](b: A2)(implicit
+    tef: TypedExpressionFactory[A2, T2],
+    ev: TypeComparer[A1, A2],
+    evT: TypeComparer[T1, T2]
+  ) = new EqualityExpression(this, tef.create(b))
+
+  def ===[A2, T2 <: PrimitiveType](
+    q: Query[Measures[A2]]
+  )(implicit tef: TypedExpressionFactory[A2, T2], ev: TypeComparer[T1, T2]) =
+    new BinaryOperatorNodeLogicalBoolean(this, q.copy(asRoot = false, Nil).ast, "=")
+
+  def ===[A2, T2 <: PrimitiveType](
+    q: Query[A2]
+  )(implicit tef: TypedExpressionFactory[A2, T2], ev: TypeComparer[T1, T2], notEv: A2 =!= Measures[_]) =
+    new BinaryOperatorNodeLogicalBoolean(this, q.copy(asRoot = false, Nil).ast, "=")
+
+  def <>[A2, T2 <: PrimitiveType](b: TypedExpression[A2, T2])(implicit ev: TypeComparer[T1, T2]) =
     new BinaryOperatorNodeLogicalBoolean(this, b, "<>")
 
-  def isDistinctFrom[A2, T2](b: TypedExpression[A2, T2])(implicit ev: CanCompare[T1, T2]) =
+  def isDistinctFrom[A2, T2 <: PrimitiveType](b: TypedExpression[A2, T2])(implicit ev: TypeComparer[T1, T2]) =
     new BinaryOperatorNodeLogicalBoolean(this, b, "IS DISTINCT FROM")
-  def isNotDistinctFrom[A2, T2](b: TypedExpression[A2, T2])(implicit ev: CanCompare[T1, T2]) =
+  def isNotDistinctFrom[A2, T2 <: PrimitiveType](b: TypedExpression[A2, T2])(implicit ev: TypeComparer[T1, T2]) =
     new BinaryOperatorNodeLogicalBoolean(this, b, "IS NOT DISTINCT FROM")
 
-  def ===[A2, T2](q: Query[Measures[A2]])(implicit tef: TypedExpressionFactory[A2, T2], ev: CanCompare[T1, T2]) =
-    new BinaryOperatorNodeLogicalBoolean(this, q.copy(false, Nil).ast, "=")
-
-  def <>[A2, T2](q: Query[Measures[A2]])(implicit tef: TypedExpressionFactory[A2, T2], ev: CanCompare[T1, T2]) =
+  def <>[A2, T2 <: PrimitiveType](
+    q: Query[Measures[A2]]
+  )(implicit tef: TypedExpressionFactory[A2, T2], ev: TypeComparer[T1, T2]) =
     new BinaryOperatorNodeLogicalBoolean(this, q.copy(false, Nil).ast, "<>")
 
-  def gt[A2, T2](b: TypedExpression[A2, T2])(implicit ev: CanCompare[T1, T2]) =
+  def gt[A2, T2 <: PrimitiveType](b: TypedExpression[A2, T2])(implicit ev: TypeComparer[T1, T2]) =
     new BinaryOperatorNodeLogicalBoolean(this, b, ">")
-  def lt[A2, T2](b: TypedExpression[A2, T2])(implicit ev: CanCompare[T1, T2]) =
+  def lt[A2, T2 <: PrimitiveType](b: TypedExpression[A2, T2])(implicit ev: TypeComparer[T1, T2]) =
     new BinaryOperatorNodeLogicalBoolean(this, b, "<")
-  def gte[A2, T2](b: TypedExpression[A2, T2])(implicit ev: CanCompare[T1, T2]) =
+  def gte[A2, T2 <: PrimitiveType](b: TypedExpression[A2, T2])(implicit ev: TypeComparer[T1, T2]) =
     new BinaryOperatorNodeLogicalBoolean(this, b, ">=")
-  def lte[A2, T2](b: TypedExpression[A2, T2])(implicit ev: CanCompare[T1, T2]) =
+  def lte[A2, T2 <: PrimitiveType](b: TypedExpression[A2, T2])(implicit ev: TypeComparer[T1, T2]) =
     new BinaryOperatorNodeLogicalBoolean(this, b, "<=")
 
-  def gt[A2, T2](q: Query[A2])(implicit cc: CanCompare[T1, T2]): LogicalBoolean =
+  def gt[A2, T2 <: PrimitiveType](q: Query[A2])(implicit cc: TypeComparer[T1, T2]): LogicalBoolean =
     new BinaryOperatorNodeLogicalBoolean(this, q.copy(false, Nil).ast, ">")
-  def gte[A2, T2](q: Query[A2])(implicit cc: CanCompare[T1, T2]): LogicalBoolean =
+  def gte[A2, T2 <: PrimitiveType](q: Query[A2])(implicit cc: TypeComparer[T1, T2]): LogicalBoolean =
     new BinaryOperatorNodeLogicalBoolean(this, q.copy(false, Nil).ast, ">=")
-  def lt[A2, T2](q: Query[A2])(implicit cc: CanCompare[T1, T2]): LogicalBoolean =
+  def lt[A2, T2 <: PrimitiveType](q: Query[A2])(implicit cc: TypeComparer[T1, T2]): LogicalBoolean =
     new BinaryOperatorNodeLogicalBoolean(this, q.copy(false, Nil).ast, "<")
-  def lte[A2, T2](q: Query[A2])(implicit cc: CanCompare[T1, T2]): LogicalBoolean =
+  def lte[A2, T2 <: PrimitiveType](q: Query[A2])(implicit cc: TypeComparer[T1, T2]): LogicalBoolean =
     new BinaryOperatorNodeLogicalBoolean(this, q.copy(false, Nil).ast, "<=")
 
-  def >[A2, T2](q: Query[A2])(implicit cc: CanCompare[T1, T2]): LogicalBoolean = gt(q)
-  def >=[A2, T2](q: Query[A2])(implicit cc: CanCompare[T1, T2]): LogicalBoolean = gte(q)
-  def <[A2, T2](q: Query[A2])(implicit cc: CanCompare[T1, T2]): LogicalBoolean = lt(q)
-  def <=[A2, T2](q: Query[A2])(implicit cc: CanCompare[T1, T2]): LogicalBoolean = lte(q)
+  def >[A2, T2 <: PrimitiveType](q: Query[A2])(implicit cc: TypeComparer[T1, T2]): LogicalBoolean = gt(q)
+  def >=[A2, T2 <: PrimitiveType](q: Query[A2])(implicit cc: TypeComparer[T1, T2]): LogicalBoolean = gte(q)
+  def <[A2, T2 <: PrimitiveType](q: Query[A2])(implicit cc: TypeComparer[T1, T2]): LogicalBoolean = lt(q)
+  def <=[A2, T2 <: PrimitiveType](q: Query[A2])(implicit cc: TypeComparer[T1, T2]): LogicalBoolean = lte(q)
 
-  def >[A2, T2](b: TypedExpression[A2, T2])(implicit ev: CanCompare[T1, T2]) = gt(b)
-  def <[A2, T2](b: TypedExpression[A2, T2])(implicit ev: CanCompare[T1, T2]) = lt(b)
-  def >=[A2, T2](b: TypedExpression[A2, T2])(implicit ev: CanCompare[T1, T2]) = gte(b)
-  def <=[A2, T2](b: TypedExpression[A2, T2])(implicit ev: CanCompare[T1, T2]) = lte(b)
+  def >[A2, T2 <: PrimitiveType](b: TypedExpression[A2, T2])(implicit ev: TypeComparer[T1, T2]) = gt(b)
+  def <[A2, T2 <: PrimitiveType](b: TypedExpression[A2, T2])(implicit ev: TypeComparer[T1, T2]) = lt(b)
+  def >=[A2, T2 <: PrimitiveType](b: TypedExpression[A2, T2])(implicit ev: TypeComparer[T1, T2]) = gte(b)
+  def <=[A2, T2 <: PrimitiveType](b: TypedExpression[A2, T2])(implicit ev: TypeComparer[T1, T2]) = lte(b)
 
   // TODO: add T1 <:< TOption to isNull and isNotNull
   def isNull = new PostfixOperatorNode("is null", this) with LogicalBoolean
   def isNotNull = new PostfixOperatorNode("is not null", this) with LogicalBoolean
 
-  def between[A2, T2, A3, T3](b1: TypedExpression[A2, T2], b2: TypedExpression[A3, T3])(implicit
-    ev1: CanCompare[T1, T2],
-    ev2: CanCompare[T2, T3]
+  def between[A2, T2 <: PrimitiveType, A3, T3 <: PrimitiveType](
+    b1: TypedExpression[A2, T2],
+    b2: TypedExpression[A3, T3]
+  )(implicit
+    ev1: TypeComparer[T1, T2],
+    ev2: TypeComparer[T2, T3]
   ) = new BetweenExpression(this, b1, b2)
 
-  def like[A2, T2 <: TOptionString](s: TypedExpression[A2, T2])(implicit ev: CanCompare[T1, T2]) =
+  def like[A2, T2 <: TOptionString](s: TypedExpression[A2, T2])(implicit ev: TypeComparer[T1, T2]) =
     new BinaryOperatorNodeLogicalBoolean(this, s, "like")
 
-  def ilike[A2, T2 <: TOptionString](s: TypedExpression[A2, T2])(implicit ev: CanCompare[T1, T2]) =
+  def ilike[A2, T2 <: TOptionString](s: TypedExpression[A2, T2])(implicit ev: TypeComparer[T1, T2]) =
     new BinaryOperatorNodeLogicalBoolean(this, s, "ilike")
 
-  def ||[A2, T2](e: TypedExpression[A2, T2]) = new ConcatOp[A1, A2, T1, T2](this, e)
+  def ||[A2, T2 <: PrimitiveType](e: TypedExpression[A2, T2]) = new ConcatOp[A1, A2, T1, T2](this, e)
 
   def regex(pattern: String) = new FunctionNode(pattern, Seq(this)) with LogicalBoolean {
 
@@ -200,21 +232,23 @@ trait TypedExpression[A1, T1] extends ExpressionNode {
   def is(columnAttributes: AttributeValidOnNumericalColumn*)(implicit restrictUsageWithinSchema: Schema) =
     new ColumnAttributeAssignment(_fieldMetaData, columnAttributes)
 
-  def in[A2, T2](t: Iterable[A2])(implicit ev: TypedExpressionFactory[A2, T2], cc: CanCompare[T1, T2]): LogicalBoolean =
+  def in[A2, T2 <: PrimitiveType](
+    t: Iterable[A2]
+  )(implicit tef: TypedExpressionFactory[A2, T2], ev: TypeComparer[A1, A2], evT: TypeComparer[T1, T2]): LogicalBoolean =
     new InclusionOperator(
       this,
-      new RightHandSideOfIn(new ConstantExpressionNodeList(t.map(ev.createConstant))).toIn
+      new RightHandSideOfIn(new ConstantExpressionNodeList(t.map(tef.createConstant))).toIn
     )
 
-  def in[A2, T2](q: Query[A2])(implicit cc: CanCompare[T1, T2]): LogicalBoolean =
+  def in[A2, T2 <: PrimitiveType](q: Query[A2])(implicit cc: TypeComparer[T1, T2]): LogicalBoolean =
     new InclusionOperator(this, new RightHandSideOfIn(q.copy(asRoot = false, Nil).ast))
 
-  def notIn[A2, T2](
+  def notIn[A2, T2 <: PrimitiveType](
     t: Iterable[A2]
-  )(implicit ev: TypedExpressionFactory[A2, T2], cc: CanCompare[T1, T2]): LogicalBoolean =
+  )(implicit ev: TypedExpressionFactory[A2, T2], cc: TypeComparer[T1, T2]): LogicalBoolean =
     new ExclusionOperator(this, new RightHandSideOfIn(new ConstantExpressionNodeList(t.map(ev.createConstant))).toNotIn)
 
-  def notIn[A2, T2](q: Query[A2])(implicit cc: CanCompare[T1, T2]): LogicalBoolean =
+  def notIn[A2, T2 <: PrimitiveType](q: Query[A2])(implicit cc: TypeComparer[T1, T2]): LogicalBoolean =
     new ExclusionOperator(this, new RightHandSideOfIn(q.copy(asRoot = false, Nil).ast))
 
   def ~ = this
@@ -268,7 +302,7 @@ trait TypedExpression[A1, T1] extends ExpressionNode {
   }
 }
 
-class TypedExpressionConversion[A1, T1](val e: ExpressionNode, bf: TypedExpressionFactory[A1, T1])
+class TypedExpressionConversion[A1, T1 <: PrimitiveType](val e: ExpressionNode, bf: TypedExpressionFactory[A1, T1])
     extends TypedExpression[A1, T1] {
 
   def mapper: OutMapper[A1] = bf.createOutMapper
@@ -280,13 +314,15 @@ class TypedExpressionConversion[A1, T1](val e: ExpressionNode, bf: TypedExpressi
   override def children = e.children
 }
 
-trait Floatifier[T1, A2, T2] {
+trait Floatifier[T1 <: PrimitiveType, A2, T2 <: PrimitiveType] {
   def floatify(v: ExpressionNode): TypedExpressionConversion[A2, T2]
 }
 
-trait IdentityFloatifier[A1, T1] extends Floatifier[T1, A1, T1]
+trait IdentityFloatifier[A1, T1 <: PrimitiveType] extends Floatifier[T1, A1, T1]
 
-trait FloatTypedExpressionFactory[A1, T1] extends TypedExpressionFactory[A1, T1] with IdentityFloatifier[A1, T1] {
+trait FloatTypedExpressionFactory[A1, T1 <: PrimitiveType]
+    extends TypedExpressionFactory[A1, T1]
+    with IdentityFloatifier[A1, T1] {
   self: JdbcMapper[_, A1] =>
   def floatify(v: ExpressionNode): TypedExpressionConversion[A1, T1] = convert(v)
 }
@@ -314,7 +350,7 @@ trait PrimitiveJdbcMapper[A] extends JdbcMapper[A, A] {
   def nativeJdbcType = sample.asInstanceOf[AnyRef].getClass
 }
 
-abstract class NonPrimitiveJdbcMapper[P, A, T](
+abstract class NonPrimitiveJdbcMapper[P, A, T <: PrimitiveType](
   val primitiveMapper: PrimitiveJdbcMapper[P],
   val fieldMapper: FieldMapper
 ) extends JdbcMapper[P, A]
@@ -331,7 +367,17 @@ abstract class NonPrimitiveJdbcMapper[P, A, T](
   fieldMapper.register(this)
 }
 
-trait TypedExpressionFactory[A, T] {
+object NonPrimitiveJdbcMapper {
+  def create[P, A, T <: PrimitiveType](from: P => A, to: A => P)(implicit
+    tef: PrimitiveJdbcMapper[P] with TypedExpressionFactory[P, T],
+    fieldMapper: FieldMapper
+  ): NonPrimitiveJdbcMapper[P, A, T] = new NonPrimitiveJdbcMapper[P, A, T](tef, fieldMapper) {
+    override def convertFromJdbc(v: P): A = from(v)
+    override def convertToJdbc(v: A): P = to(v)
+  }
+}
+
+trait TypedExpressionFactory[A, T <: PrimitiveType] {
   self: JdbcMapper[_, A] =>
 
   def thisAnyRefMapper = this.asInstanceOf[JdbcMapper[AnyRef, A]]
@@ -374,7 +420,21 @@ trait TypedExpressionFactory[A, T] {
   }
 }
 
-trait IntegralTypedExpressionFactory[A1, T1, A2, T2]
+object TypedExpressionFactory {
+
+  def createOptionMapper[A, A1, T <: PrimitiveType, TOpt <: PrimitiveType](implicit
+    tef: JdbcMapper[A1, A] with TypedExpressionFactory[A, T]
+  ): JdbcMapper[A1, Option[A]]
+    with TypedExpressionFactory[Option[A], TOpt]
+    with DeOptionizer[A1, A, T, Option[A], TOpt] =
+    new JdbcMapper[A1, Option[A]]
+      with TypedExpressionFactory[Option[A], TOpt]
+      with DeOptionizer[A1, A, T, Option[A], TOpt] {
+      override def deOptionizer: TypedExpressionFactory[A, T] with JdbcMapper[A1, A] = tef
+    }
+}
+
+trait IntegralTypedExpressionFactory[A1, T1 <: PrimitiveType, A2, T2 <: PrimitiveType]
     extends TypedExpressionFactory[A1, T1]
     with Floatifier[T1, A2, T2] {
   self: JdbcMapper[_, A1] =>
@@ -383,7 +443,8 @@ trait IntegralTypedExpressionFactory[A1, T1, A2, T2]
   def floatifyer: TypedExpressionFactory[A2, T2]
 }
 
-trait DeOptionizer[P1, A1, T1, A2 >: Option[A1] <: Option[A1], T2] extends JdbcMapper[P1, A2] {
+trait DeOptionizer[P1, A1, T1 <: PrimitiveType, A2 >: Option[A1] <: Option[A1], T2 <: PrimitiveType]
+    extends JdbcMapper[P1, A2] {
   self: TypedExpressionFactory[A2, T2] =>
 
   def deOptionizer: TypedExpressionFactory[A1, T1] with JdbcMapper[P1, A1]
@@ -416,13 +477,15 @@ trait DeOptionizer[P1, A1, T1, A2 >: Option[A1] <: Option[A1], T2] extends JdbcM
   }
 }
 
-class ConcatOp[A1, A2, T1, T2](val a1: TypedExpression[A1, T1], val a2: TypedExpression[A2, T2])
-    extends BinaryOperatorNode(a1, a2, "||") {
+class ConcatOp[A1, A2, T1 <: PrimitiveType, T2 <: PrimitiveType](
+  val a1: TypedExpression[A1, T1],
+  val a2: TypedExpression[A2, T2]
+) extends BinaryOperatorNode(a1, a2, "||") {
   override def doWrite(sw: StatementWriter) =
     sw.databaseAdapter.writeConcatOperator(a1, a2, sw)
 }
 
-class NvlNode[A, T](e1: TypedExpression[_, _], e2: TypedExpression[A, T])
+class NvlNode[A, T <: PrimitiveType](e1: TypedExpression[_, _], e2: TypedExpression[A, T])
     extends BinaryOperatorNode(e1, e2, "nvl", false)
     with TypedExpression[A, T] {
 

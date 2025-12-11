@@ -107,7 +107,7 @@ trait ExpressionNode {
     inhibitWhen(c.value == None)
   }
 
-  def cast[A, T](typ: String)(implicit tef: TypedExpressionFactory[A, T]): TypedExpression[A, T] =
+  def cast[A, T <: PrimitiveType](typ: String)(implicit tef: TypedExpressionFactory[A, T]): TypedExpression[A, T] =
     new CastExpressionNode(this, typ) with TypedExpression[A, T] {
       override def mapper = tef.createOutMapper
     }
@@ -354,9 +354,9 @@ class TokenExpressionNode(val token: String) extends ExpressionNode {
 }
 
 private[squeryl] class InputOnlyConstantExpressionNode(v: Any)
-    extends ConstantTypedExpression[Any, Any](v, v.asInstanceOf[AnyRef], None)
+    extends ConstantTypedExpression[Any, PrimitiveType](v, v.asInstanceOf[AnyRef], None)
 
-class ConstantTypedExpression[A1, T1](
+class ConstantTypedExpression[A1, T1 <: PrimitiveType](
   val value: A1,
   val nativeJdbcValue: AnyRef,
   i: Option[TypedExpressionFactory[A1, _]]
@@ -396,7 +396,8 @@ class ConstantTypedExpression[A1, T1](
   override def toString = "'ConstantTypedExpression:" + value
 }
 
-class ConstantExpressionNodeList(val value: Iterable[ConstantTypedExpression[_, _]]) extends ExpressionNode {
+class ConstantExpressionNodeList[T <: PrimitiveType](val value: Iterable[ConstantTypedExpression[_, T]])
+    extends ExpressionNode {
 
   def isEmpty =
     value.isEmpty
@@ -633,7 +634,7 @@ class RightHandSideOfIn[A](val ast: ExpressionNode, val isIn: Option[Boolean] = 
         (!isIn.get))
 
   def isConstantEmptyList: Boolean = ast match {
-    case a: ConstantExpressionNodeList =>
+    case a: ConstantExpressionNodeList[_] =>
       a.isEmpty
     case a: ListExpressionNode =>
       a.children.isEmpty
@@ -670,7 +671,7 @@ class UnionExpressionNode(val kind: String, val ast: ExpressionNode) extends Exp
     List(ast)
 }
 
-class QueryValueExpressionNode[A1, T1](val ast: ExpressionNode, override val mapper: OutMapper[A1])
+class QueryValueExpressionNode[A1, T1 <: PrimitiveType](val ast: ExpressionNode, override val mapper: OutMapper[A1])
     extends TypedExpression[A1, T1] {
   def doWrite(sw: StatementWriter) = {
     ast.write(sw)
