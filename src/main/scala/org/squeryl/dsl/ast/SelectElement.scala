@@ -17,7 +17,8 @@ package org.squeryl.dsl.ast
 
 import org.squeryl.internals._
 import org.squeryl.Session
-import org.squeryl.dsl.TypedExpression
+import org.squeryl.dsl.{PrimitiveType, TypedExpression}
+
 import scala.annotation.tailrec
 
 /**
@@ -241,7 +242,7 @@ class ValueSelectElement(
  * with the exception of SelectElement that refer to an inner or outer query's SelectElement,
  * these are ExportedSelectElement
  */
-class SelectElementReference[A, T](val selectElement: SelectElement, val mapper: OutMapper[A])
+class SelectElementReference[A, T <: PrimitiveType](val selectElement: SelectElement, val mapper: OutMapper[A])
     extends TypedExpression[A, T] {
 
   override def toString =

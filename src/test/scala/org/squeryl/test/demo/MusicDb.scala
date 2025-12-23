@@ -115,7 +115,7 @@ class Playlist(val name: String, val path: String) extends MusicDbObject {
 
 class PlaylistElement(var songNumber: Int, var playlistId: Long, var songId: Long)
 
-class Rating(var userId: Long, var appreciationScore: Int, var songId: Int)
+class Rating(var userId: Long, var appreciationScore: Int, var songId: Long)
 
 object MusicDb extends Schema {
 
@@ -187,7 +187,7 @@ abstract class KickTheTires extends SchemaTester with RunTestsInsideTransaction 
     assert(songIds == funkAndLatinJazz.songsInPlaylistOrder.map(_.id).toSet)
 
     // Nesting in From clause :
-    from(funkAndLatinJazz.songsInPlaylistOrder)(s => where(s.id === 123).select(s))
+    from(funkAndLatinJazz.songsInPlaylistOrder)(s => where(s.id === 123L).select(s))
 
     // Left Outer Join :
     join(songs, ratings.leftOuter)((s, r) => select((s, r)).on(s.id === r.map(_.songId)))

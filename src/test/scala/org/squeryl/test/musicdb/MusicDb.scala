@@ -101,7 +101,9 @@ class TestData(schema: MusicDb) {
   val freedomSoundAlbum = cds.insert(new Cd("Freedom Sound", ponchoSanchez.id, 1997))
 
   val freedomSound =
-    songs.insert(new Song("Freedom Sound", ponchoSanchez.id, ponchoSanchez.id, freedomSoundAlbum.id, Jazz.id, Some(Latin.id)))
+    songs.insert(
+      new Song("Freedom Sound", ponchoSanchez.id, ponchoSanchez.id, freedomSoundAlbum.id, Jazz.id, Some(Latin.id))
+    )
 
   val expectedSongCountPerAlbum = List((congaBlue.title, 2), (freedomSoundAlbum.title, 1))
 }
@@ -237,7 +239,7 @@ abstract class MusicDbTestRun extends SchemaTester with QueryTester with RunTest
   def assertionFailed(s: String, actual: Any, expected: Any) =
     assert(actual == expected, "" + s + " failed, got " + actual + " expected " + expected)
 
-  private def _innerTx(songId: Long) = inTransaction {
+  private def _innerTx(songId: Int) = inTransaction {
 
     songs.where(_.id === songId).single
   }
@@ -840,7 +842,7 @@ abstract class MusicDbTestRun extends SchemaTester with QueryTester with RunTest
 
     // test for  Option[Enumeration] :
 
-    val q2 = songs.where(_.secondaryGenre === Some(Genre.Latin.id)).map(_.id).toSet
+    val q2 = songs.where(_.secondaryGenre === Option(Genre.Latin.id)).map(_.id).toSet
 
     q2 shouldBe Set(watermelonMan.id, freedomSound.id)
 
